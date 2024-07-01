@@ -26,13 +26,13 @@ def get_default_gates(
     for qubit in range(n_qubits):
         next_qubit = (qubit + 1) % n_qubits
         gates += [
-            # RX(qubit, np.pi / 4.),
-            # RY(qubit, np.pi / 4.),
+            RX(qubit, np.pi / 4.),
+            RY(qubit, np.pi / 4.),
             RZ(qubit, np.pi / 4.),
             X(qubit),
             Y(qubit),
             Z(qubit),
-            H(qubit),
+            # H(qubit),
             CNOT(qubit, next_qubit)
         ]
     return gates

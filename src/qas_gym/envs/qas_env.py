@@ -3,7 +3,7 @@ from contextlib import closing
 from io import StringIO
 from typing import Dict, List, Optional, Union
 
-#import cirq
+import cirq
 import gym
 import numpy as np
 from gym import spaces
@@ -83,6 +83,41 @@ class QuantumArchSearchEnv(gym.Env):
                 self.error_observables, *self.qubits)
             circuit.append(noise_observable)
         return circuit
+
+    def _get_cirq_for_vis(self, maybe_add_noise=False):
+        qubits = cirq.LineQubit.range(self.n_qubits)
+        circuit = cirq.Circuit(cirq.I(qubit) for qubit in qubits)
+        for gate in self.circuit_gates:
+            # print(gate.get_name())
+            if gate.get_name() == 'X':
+               cir_gate = cirq.X(qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'Y':
+                cir_gate = cirq.Y(qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'Z':
+                cir_gate = cirq.Z(qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'X-rotation':
+                cir_gate = cirq.rx(np.pi/2)(qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'Y-rotation':
+                cir_gate = cirq.ry(np.pi/2)(qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'Z-rotation':
+                cir_gate = cirq.rz(np.pi/2)(qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'CNOT':
+                cir_gate = cirq.CNOT(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
+            else:
+                raise TypeError("Wrong gate type")
+
+
+            circuit.append(cir_gate)
+            if maybe_add_noise and (self.error_gates is not None):
+                noise_gate = cirq.depolarize(
+                    self.error_gates).on_each(*gate._qubits)
+                circuit.append(noise_gate)
+        if maybe_add_noise and (self.error_observables is not None):
+            noise_observable = cirq.bit_flip(
+                self.error_observables).on_each(*self.qubits)
+            circuit.append(noise_observable)
+        return circuit
+
 
     def _get_obs(self):
         state = QuantumState(self.n_qubits) # deepcopy(self.state)
@@ -165,7 +200,7 @@ class QuantumArchSearchEnv(gym.Env):
 
     def render(self, mode='human'):
         outfile = StringIO() if mode == 'ansi' else sys.stdout
-        outfile.write('\n' + self._get_cirq(False).__str__() + '\n')
+        outfile.write('\n' + self._get_cirq_for_vis(False).__str__() + '\n')
 
         if mode != 'human':
             with closing(outfile):
