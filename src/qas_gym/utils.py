@@ -29,10 +29,10 @@ def get_default_gates(
             RX(qubit, np.pi / 4.),
             RY(qubit, np.pi / 4.),
             RZ(qubit, np.pi / 4.),
-            X(qubit),
-            Y(qubit),
-            Z(qubit),
-            # H(qubit),
+            # X(qubit),
+            # Y(qubit),
+            # Z(qubit),
+            H(qubit),
             CNOT(qubit, next_qubit)
         ]
     return gates

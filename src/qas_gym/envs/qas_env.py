@@ -1,4 +1,5 @@
 import sys
+sys.path.append("C:/Users/Mac/Documents/Code/quantum-arch-search/src/qas_gym/envs")
 from contextlib import closing
 from io import StringIO
 from typing import Dict, List, Optional, Union
@@ -8,10 +9,11 @@ import gym
 import numpy as np
 from gym import spaces
 from gym.utils import seeding
-# from qulacs_core import QuantumGateBase
 from qulacs.gate import BitFlipNoise,DepolarizingNoise
-from qulacs import QuantumGateBase, QuantumState, QuantumCircuit, QuantumCircuitSimulator, Observable
+from qulacs import QuantumGateBase, QuantumState, QuantumCircuit, QuantumCircuitSimulator, Observable, ParametricQuantumCircuit
 from copy import deepcopy
+from vqc import Parametric_Circuit, get_fidelity_pc, calculate_fidelity
+from scipy import optimize
 
 class QuantumArchSearchEnv(gym.Env):
     metadata = {'render.modes': ['ansi', 'human']}
@@ -28,12 +30,13 @@ class QuantumArchSearchEnv(gym.Env):
         max_timesteps: int,
         error_observables: Optional[float] = None,
         error_gates: Optional[float] = None,
+        initial: Optional[np.ndarray] = None,
     ):
         super(QuantumArchSearchEnv, self).__init__()
 
         # set parameters
         self.target = target
-        self.n_qubits = n_qubits
+        self.num_qubits = n_qubits
         self.state_observables = state_observables
         self.action_gates = action_gates
         self.fidelity_threshold = fidelity_threshold
@@ -41,6 +44,8 @@ class QuantumArchSearchEnv(gym.Env):
         self.max_timesteps = max_timesteps
         self.error_observables = error_observables
         self.error_gates = error_gates
+        self.initial = initial
+        self.ansatz = ParametricQuantumCircuit(n_qubits)
         # set environment
         self.target_density = target * np.conj(target).T
         # self.simulator = cirq.Simulator()
@@ -49,6 +54,8 @@ class QuantumArchSearchEnv(gym.Env):
                                             high=1.,
                                             shape=(len(state_observables), ))
         self.action_space = spaces.Discrete(n=len(action_gates))
+        self.optim_alg = 'Nelder-Mead'
+        self.global_iters = 1000
         self.seed()
 
     def __str__(self):
@@ -68,10 +75,11 @@ class QuantumArchSearchEnv(gym.Env):
 
     def reset(self):
         self.circuit_gates = []
+        self.ansatz = ParametricQuantumCircuit(self.num_qubits)
         return self._get_obs()
 
     def _get_cirq(self, maybe_add_noise=False):
-        circuit = QuantumCircuit(self.n_qubits)
+        circuit = QuantumCircuit(self.num_qubits)
         for gate in self.circuit_gates:
             circuit.add_gate(gate)
             if maybe_add_noise and (self.error_gates is not None):
@@ -85,10 +93,9 @@ class QuantumArchSearchEnv(gym.Env):
         return circuit
 
     def _get_cirq_for_vis(self, maybe_add_noise=False):
-        qubits = cirq.LineQubit.range(self.n_qubits)
+        qubits = cirq.LineQubit.range(self.num_qubits)
         circuit = cirq.Circuit(cirq.I(qubit) for qubit in qubits)
-        for gate in self.circuit_gates:
-            # print(gate.get_name())
+        for idx, gate in enumerate(self.circuit_gates):
             if gate.get_name() == 'X':
                cir_gate = cirq.X(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'Y':
@@ -96,16 +103,17 @@ class QuantumArchSearchEnv(gym.Env):
             elif gate.get_name() == 'Z':
                 cir_gate = cirq.Z(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'X-rotation':
-                cir_gate = cirq.rx(np.pi/2)(qubits[gate.get_target_index_list()[0]])
+                cir_gate = cirq.rx(np.pi/4)(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'Y-rotation':
-                cir_gate = cirq.ry(np.pi/2)(qubits[gate.get_target_index_list()[0]])
+                cir_gate = cirq.ry(np.pi/4)(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'Z-rotation':
-                cir_gate = cirq.rz(np.pi/2)(qubits[gate.get_target_index_list()[0]])
+                cir_gate = cirq.rz(np.pi/4)(qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'H':
+                cir_gate = cirq.H(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'CNOT':
                 cir_gate = cirq.CNOT(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
             else:
                 raise TypeError("Wrong gate type")
-
 
             circuit.append(cir_gate)
             if maybe_add_noise and (self.error_gates is not None):
@@ -119,25 +127,97 @@ class QuantumArchSearchEnv(gym.Env):
         return circuit
 
 
+    # def _get_obs(self):
+    #     state = QuantumState(self.num_qubits) # deepcopy(self.state)
+    #     if self.initial:
+    #         state.load(self.initial)  
+    #     circuit = self._get_cirq(maybe_add_noise=False)
+    #     simulator = QuantumCircuitSimulator(circuit, state)
+    #     # obs = [simulator.get_expectation_value(o) for o in self.state_observables]
+    #     simulator.simulate()
+    #     obs = [o.get_expectation_value(state) for o in self.state_observables]
+    #     return np.array(obs).real
+    
     def _get_obs(self):
-        state = QuantumState(self.n_qubits) # deepcopy(self.state)
-        circuit = self._get_cirq(maybe_add_noise=False)
-        simulator = QuantumCircuitSimulator(circuit, state)
-        # obs = [simulator.get_expectation_value(o) for o in self.state_observables]
+        state = QuantumState(self.num_qubits) # deepcopy(self.state)
+        if self.initial:
+            state.load(self.initial)  
+        simulator = QuantumCircuitSimulator(self.ansatz, state)
         simulator.simulate()
+        print("state: ", state.get_vector())
         obs = [o.get_expectation_value(state) for o in self.state_observables]
-        return np.array(obs).real
+        return np.array(obs).real       
 
-    def _get_fidelity(self):
-        state =  QuantumState(self.n_qubits) # deepcopy(self.state)
-        circuit = self._get_cirq(maybe_add_noise=False)
+    # def _get_fidelity(self):
+    #     state =  QuantumState(self.num_qubits) # deepcopy(self.state)
+    #     if self.initial:
+    #         state.load(self.initial)  
+
+    #     circuit = self._get_cirq(maybe_add_noise=False)
+    #     simulator = QuantumCircuitSimulator(circuit, state)
+    #     simulator.simulate()
+    #     print(state.get_vector())
+    #     inner = np.inner(np.conj(state.get_vector()), self.target)
+    #     fidelity = np.conj(inner) * inner
+    #     return fidelity.real
+
+    def _get_fidelity_qulacs(self, circuit):
+        state =  QuantumState(self.num_qubits) # deepcopy(self.state)
+        if self.initial:
+            state.load(self.initial)          
         simulator = QuantumCircuitSimulator(circuit, state)
         simulator.simulate()
-        print(state.get_vector())
-        inner = np.inner(np.conj(state.get_vector()), self.target)
-        fidelity = np.conj(inner) * inner
-        return fidelity.real
+        return calculate_fidelity(state, self.target)
 
+    def scipy_optim(self, method, which_angles=[]):
+        """
+        if only optimize the latest parameter, set which_angles=[-1]
+        """
+        # qulacs_inst = Parametric_Circuit(n_qubits=self.num_qubits)
+        # circuit = qulacs_inst.construct_ansatz(self.circuit_gates)
+        circuit = self.ansatz
+        parameter_count_qulacs = circuit.get_parameter_count()
+        print(r"number of gates:{},  number of param gates:{}".format(circuit.get_gate_count(), parameter_count_qulacs))
+        if parameter_count_qulacs > 0:
+
+            thetas = [circuit.get_parameter(ind) for ind in range(parameter_count_qulacs)] 
+            x0 = np.asarray(thetas)
+            if list(which_angles):
+                # print(which_angles)
+                # print(x0)
+                result_min_qulacs = optimize.minimize(get_fidelity_pc, x0=x0[which_angles],
+                                                                args=(circuit,
+                                                                    self.num_qubits,
+                                                                    self.target,
+                                                                    self.initial,
+                                                                    which_angles),
+                                                                method=method,
+                                                                options={'maxiter':self.global_iters})
+                # print(result_min_qulacs)
+                x0[which_angles] = result_min_qulacs['x']
+                # state[-1][state[2]!=self.num_qubits] = torch.tensor(x0, dtype=torch.float)
+            else:
+                result_min_qulacs = optimize.minimize(get_fidelity_pc, x0=x0,
+                                                            args=(circuit,
+                                                                self.num_qubits,
+                                                                self.target,
+                                                                self.initial),
+                                                            method=method,
+                                                            options={'maxiter':self.global_iters})
+                # state[-1][state[2]!=self.num_qubits] = torch.tensor(result_min_qulacs['x'], dtype=torch.float)
+                x0 = result_min_qulacs['x']
+
+                # print(-result_min_qulacs['fun'])
+                if  result_min_qulacs['success']:
+                    result = -result_min_qulacs['fun']
+                else:
+                    result = -get_fidelity_pc(x0, circuit, self.num_qubits, self.target)
+        else:
+            result = self._get_fidelity_qulacs(circuit)
+            x0 = None
+
+        return result, x0
+    
     # def _get_fidelity_estimate(self):
     #     circuit = self._get_cirq(maybe_add_noise=False)
     #     print(circuit)
@@ -174,14 +254,32 @@ class QuantumArchSearchEnv(gym.Env):
 
         # update circuit
         action_gate = self.action_gates[action]
-        self.circuit_gates.append(action_gate)
-
+        self.circuit_gates.append(action_gate) # 后面不再使用
+        ##
+        # self.circuit_gates.append(action_gate)
+        if action_gate.get_name() in ('X-rotation', 'Y-rotation', 'Z-rotation'): 
+            theta = np.random.rand()
+            if action_gate.get_name() =='X-rotation':
+                self.ansatz.add_parametric_RX_gate(action_gate.get_target_index_list()[0], theta)
+            elif action_gate.get_name() =='Y-rotation':
+                self.ansatz.add_parametric_RY_gate(action_gate.get_target_index_list()[0], theta)
+            elif action_gate.get_name() =='Z-rotation':
+                self.ansatz.add_parametric_RZ_gate(action_gate.get_target_index_list()[0], theta)
+        elif action_gate.get_name() =='CNOT':
+            self.ansatz.add_CNOT_gate(action_gate.get_control_index_list()[0],action_gate.get_target_index_list()[0])
+        elif action_gate.get_name() =='H':
+            self.ansatz.add_H_gate(action_gate.get_target_index_list()[0])
+        else:
+            raise TypeError("Not implemented")
         # compute observation
         observation = self._get_obs()
+        # print(observation)
 
         # compute fidelity
-        fidelity = self._get_fidelity()
+        # fidelity = self._get_fidelity()
         # fidelity = self._get_fidelity_estimate()
+        fidelity, thetas = self.scipy_optim(self.optim_alg)
+        print("Parameters: ", thetas)
 
         # compute reward
         if fidelity > self.fidelity_threshold:
@@ -190,11 +288,11 @@ class QuantumArchSearchEnv(gym.Env):
             reward = -self.reward_penalty
 
         # check if terminal
-        terminal = (reward > 0.) or (len(self.circuit_gates) >=
+        terminal = (reward > 0.) or (self.ansatz.get_gate_count() >=
                                      self.max_timesteps)
 
         # return info
-        info = {'fidelity': fidelity, 'circuit': self._get_cirq()}
+        info = {'fidelity': fidelity, 'circuit': self._get_cirq()} #self._get_cirq_with_params()
 
         return observation, reward, terminal, info
 
@@ -205,3 +303,4 @@ class QuantumArchSearchEnv(gym.Env):
         if mode != 'human':
             with closing(outfile):
                 return outfile.getvalue()
+
