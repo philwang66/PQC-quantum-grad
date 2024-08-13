@@ -47,7 +47,7 @@ class QuantumArchSearchEnv(gym.Env):
         self.initial = initial
         self.ansatz = ParametricQuantumCircuit(n_qubits)
         # set environment
-        self.target_density = target * np.conj(target).T
+        # self.target_density = target * np.conj(target).T
         # self.simulator = cirq.Simulator()
         # set spaces
         self.observation_space = spaces.Box(low=-1.,
@@ -95,7 +95,13 @@ class QuantumArchSearchEnv(gym.Env):
     def _get_cirq_for_vis(self, maybe_add_noise=False):
         qubits = cirq.LineQubit.range(self.num_qubits)
         circuit = cirq.Circuit(cirq.I(qubit) for qubit in qubits)
+        i = 0
+
         for idx, gate in enumerate(self.circuit_gates):
+            if gate.get_name() in ('X-rotation', 'Y-rotation' ,'Z-rotation'): 
+                angle = self.ansatz.get_parameter(i)
+                i += 1
+
             if gate.get_name() == 'X':
                cir_gate = cirq.X(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'Y':
@@ -103,17 +109,19 @@ class QuantumArchSearchEnv(gym.Env):
             elif gate.get_name() == 'Z':
                 cir_gate = cirq.Z(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'X-rotation':
-                cir_gate = cirq.rx(np.pi/4)(qubits[gate.get_target_index_list()[0]])
+                cir_gate = cirq.rx(angle)(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'Y-rotation':
-                cir_gate = cirq.ry(np.pi/4)(qubits[gate.get_target_index_list()[0]])
+                cir_gate = cirq.ry(angle)(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'Z-rotation':
-                cir_gate = cirq.rz(np.pi/4)(qubits[gate.get_target_index_list()[0]])
+                cir_gate = cirq.rz(angle)(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'H':
                 cir_gate = cirq.H(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'CNOT':
                 cir_gate = cirq.CNOT(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
             else:
                 raise TypeError("Wrong gate type")
+
+
 
             circuit.append(cir_gate)
             if maybe_add_noise and (self.error_gates is not None):
@@ -185,6 +193,8 @@ class QuantumArchSearchEnv(gym.Env):
             if list(which_angles):
                 # print(which_angles)
                 # print(x0)
+                bnds = [(0, 2*np.pi) for i in len(which_angles)]
+                 
                 result_min_qulacs = optimize.minimize(get_fidelity_pc, x0=x0[which_angles],
                                                                 args=(circuit,
                                                                     self.num_qubits,
@@ -192,6 +202,7 @@ class QuantumArchSearchEnv(gym.Env):
                                                                     self.initial,
                                                                     which_angles),
                                                                 method=method,
+                                                                bounds=bnds,
                                                                 options={'maxiter':self.global_iters})
                 # print(result_min_qulacs)
                 x0[which_angles] = result_min_qulacs['x']
