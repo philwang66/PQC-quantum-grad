@@ -27,3 +27,7 @@ register(id='NoisyThreeQubit-v0',
 register(id='NoisyNQubit-v0',
          entry_point='qas_gym.envs:NoisyNQubitEnv',
          nondeterministic=True)
+
+register(id='BasicFourQubit-v0',
+         entry_point='qas_gym.envs:BasicFourQubitEnv',
+         nondeterministic=True)
