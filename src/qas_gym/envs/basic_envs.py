@@ -21,7 +21,7 @@ class BasicNQubitEnv(QuantumArchSearchEnv):
 
 class BasicTwoQubitEnv(BasicNQubitEnv):
     def __init__(self,
-                                                   initial: np.ndarray,
+                 initial: np.ndarray,
                  target: np.ndarray = get_bell_state(),
                  fidelity_threshold: float = 0.95,
                  reward_penalty: float = 0.01,
@@ -35,11 +35,23 @@ class BasicTwoQubitEnv(BasicNQubitEnv):
 
 class BasicThreeQubitEnv(BasicNQubitEnv):
     def __init__(self,
-                                                   initial: np.ndarray,
+                initial: np.ndarray,
                  target: np.ndarray = get_ghz_state(3),
                  fidelity_threshold: float = 0.95,
                  reward_penalty: float = 0.01,
                  max_timesteps: int = 20):
         assert len(target) == 8, 'Target must be of size 8'
         super(BasicThreeQubitEnv, self).__init__(initial, target, fidelity_threshold,
+                                                 reward_penalty, max_timesteps)
+
+
+class BasicFourQubitEnv(BasicNQubitEnv):
+    def __init__(self,
+                 initial: np.ndarray,
+                 target: np.ndarray = get_ghz_state(4),
+                 fidelity_threshold: float = 0.95,
+                 reward_penalty: float = 0.01,
+                 max_timesteps: int = 20):
+        assert len(target) == 16, 'Target must be of size 16'
+        super(BasicFourQubitEnv, self).__init__(initial, target, fidelity_threshold,
                                                  reward_penalty, max_timesteps)

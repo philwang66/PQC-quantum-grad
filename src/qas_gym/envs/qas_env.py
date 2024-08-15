@@ -28,9 +28,9 @@ class QuantumArchSearchEnv(gym.Env):
         fidelity_threshold: float,
         reward_penalty: float,
         max_timesteps: int,
+        initial: Optional[np.ndarray] = None,
         error_observables: Optional[float] = None,
         error_gates: Optional[float] = None,
-        initial: Optional[np.ndarray] = None,
     ):
         super(QuantumArchSearchEnv, self).__init__()
 
@@ -42,9 +42,9 @@ class QuantumArchSearchEnv(gym.Env):
         self.fidelity_threshold = fidelity_threshold
         self.reward_penalty = reward_penalty
         self.max_timesteps = max_timesteps
+        self.initial = initial
         self.error_observables = error_observables
         self.error_gates = error_gates
-        self.initial = initial
         self.ansatz = ParametricQuantumCircuit(n_qubits)
         # set environment
         # self.target_density = target * np.conj(target).T
@@ -54,13 +54,14 @@ class QuantumArchSearchEnv(gym.Env):
                                             high=1.,
                                             shape=(len(state_observables), ))
         self.action_space = spaces.Discrete(n=len(action_gates))
-        self.optim_alg = 'Nelder-Mead'
+        self.optim_alg = 'COBYLA' #'Nelder-Mead'
         self.global_iters = 1000
         self.seed()
 
     def __str__(self):
         desc = 'QuantumArchSearch-v0('
-        desc += '{}={}, '.format('Qubits', len(self.qubits))
+        # desc += '{}={}, '.format('Qubits', len(self.qubits))
+        desc += '{}={}, '.format('Initial', self.initial)
         desc += '{}={}, '.format('Target', self.target)
         desc += '{}=[{}], '.format(
             'Gates', ', '.join(gate.__str__() for gate in self.action_gates))
@@ -76,7 +77,7 @@ class QuantumArchSearchEnv(gym.Env):
     def reset(self):
         self.circuit_gates = []
         self.ansatz = ParametricQuantumCircuit(self.num_qubits)
-        return self._get_obs()
+        return self._get_obs_initial()
 
     def _get_cirq(self, maybe_add_noise=False):
         circuit = QuantumCircuit(self.num_qubits)
@@ -121,8 +122,6 @@ class QuantumArchSearchEnv(gym.Env):
             else:
                 raise TypeError("Wrong gate type")
 
-
-
             circuit.append(cir_gate)
             if maybe_add_noise and (self.error_gates is not None):
                 noise_gate = cirq.depolarize(
@@ -145,19 +144,27 @@ class QuantumArchSearchEnv(gym.Env):
     #     simulator.simulate()
     #     obs = [o.get_expectation_value(state) for o in self.state_observables]
     #     return np.array(obs).real
-    
+
+    def _get_obs_initial(self):
+        # print(self.initial)
+        state = QuantumState(self.num_qubits)
+        if self.initial is not None:
+            state.load(self.initial) 
+        obs = [o.get_expectation_value(state) for o in self.state_observables]
+        return np.array(obs).real  
+
     def _get_obs(self):
-        state = QuantumState(self.num_qubits) # deepcopy(self.state)
-        if self.initial:
+        state = QuantumState(self.num_qubits)
+        if self.initial is not None:
             state.load(self.initial)  
         simulator = QuantumCircuitSimulator(self.ansatz, state)
         simulator.simulate()
-        print("state: ", state.get_vector())
+        # print("state: ", state.get_vector())
         obs = [o.get_expectation_value(state) for o in self.state_observables]
         return np.array(obs).real       
 
     # def _get_fidelity(self):
-    #     state =  QuantumState(self.num_qubits) # deepcopy(self.state)
+    #     state =  QuantumState(self.num_qubits)
     #     if self.initial:
     #         state.load(self.initial)  
 
@@ -171,7 +178,7 @@ class QuantumArchSearchEnv(gym.Env):
 
     def _get_fidelity_qulacs(self, circuit):
         state =  QuantumState(self.num_qubits) # deepcopy(self.state)
-        if self.initial:
+        if self.initial is not None:
             state.load(self.initial)          
         simulator = QuantumCircuitSimulator(circuit, state)
         simulator.simulate()
