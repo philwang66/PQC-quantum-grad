@@ -119,6 +119,10 @@ class QuantumArchSearchEnv(gym.Env):
                 cir_gate = cirq.H(qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'CNOT':
                 cir_gate = cirq.CNOT(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'CZ':
+                cir_gate = cirq.CZ(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'SWAP':
+                cir_gate = cirq.SWAP(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
             else:
                 raise TypeError("Wrong gate type")
 
@@ -285,6 +289,8 @@ class QuantumArchSearchEnv(gym.Env):
                 self.ansatz.add_parametric_RZ_gate(action_gate.get_target_index_list()[0], theta)
         elif action_gate.get_name() =='CNOT':
             self.ansatz.add_CNOT_gate(action_gate.get_control_index_list()[0],action_gate.get_target_index_list()[0])
+        elif action_gate.get_name() =='CZ':
+            self.ansatz.add_CZ_gate(action_gate.get_control_index_list()[0],action_gate.get_target_index_list()[0])
         elif action_gate.get_name() =='H':
             self.ansatz.add_H_gate(action_gate.get_target_index_list()[0])
         else:
@@ -297,13 +303,14 @@ class QuantumArchSearchEnv(gym.Env):
         # fidelity = self._get_fidelity()
         # fidelity = self._get_fidelity_estimate()
         fidelity, thetas = self.scipy_optim(self.optim_alg)
-        print("Parameters: ", thetas)
+        # print("Parameters: ", thetas)
+        print("Fidelity:", fidelity)
 
         # compute reward
         if fidelity > self.fidelity_threshold:
-            reward = fidelity - self.reward_penalty
+            reward = fidelity - self.fidelity_threshold - self.reward_penalty * self.ansatz.get_gate_count()
         else:
-            reward = -self.reward_penalty
+            reward = -self.reward_penalty * self.ansatz.get_gate_count()
 
         # check if terminal
         terminal = (reward > 0.) or (self.ansatz.get_gate_count() >=

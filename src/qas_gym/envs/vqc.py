@@ -34,6 +34,8 @@ class Parametric_Circuit:
                     self.ansatz.add_parametric_RZ_gate(gate.get_target_index_list()[0], theta)
                 elif gate.get_name() =='CNOT':
                     self.ansatz.add_CNOT_gate(gate.get_control_index_list()[0],gate.get_target_index_list()[0])
+                elif gate.get_name() =='CZ':
+                    self.ansatz.add_CZ_gate(gate.get_control_index_list()[0],gate.get_target_index_list()[0])
                 elif gate.get_name() =='H':
                     self.ansatz.add_H_gate(gate.get_target_index_list()[0])
                 else:

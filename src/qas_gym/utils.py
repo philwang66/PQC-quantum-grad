@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Union
 
 import qulacs
 import numpy as np
-from qulacs.gate import X, Y, Z, CNOT, RX, RY, RZ, H
+from qulacs.gate import X, Y, Z, CNOT, CZ, RX, RY, RZ, H
 from qulacs_core import QuantumGateBase
 from qulacs import Observable
 # def get_default_gates(
@@ -26,14 +26,15 @@ def get_default_gates(
     for qubit in range(n_qubits):
         next_qubit = (qubit + 1) % n_qubits
         gates += [
-            # RX(qubit, np.pi / 4.),
+            RX(qubit, np.pi / 4.),
             RY(qubit, np.pi / 4.),
             RZ(qubit, np.pi / 4.),
             # X(qubit),
             # Y(qubit),
             # Z(qubit),
-            # H(qubit),
-            CNOT(qubit, next_qubit)
+            H(qubit),
+            CNOT(qubit, next_qubit),
+            CZ(qubit, next_qubit)
         ]
     return gates
 
