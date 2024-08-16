@@ -1,2 +1,4 @@
 gym
+torch
 cirq
+qulacs
