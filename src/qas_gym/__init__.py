@@ -12,6 +12,10 @@ register(id='BasicThreeQubit-v0',
          entry_point='qas_gym.envs:BasicThreeQubitEnv',
          nondeterministic=True)
 
+register(id='BasicFourubit-v0',
+         entry_point='qas_gym.envs:BasicFourQubitEnv',
+         nondeterministic=True)
+
 register(id='BasicNQubit-v0',
          entry_point='qas_gym.envs:BasicNQubitEnv',
          nondeterministic=True)
