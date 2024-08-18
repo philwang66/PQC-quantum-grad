@@ -121,12 +121,14 @@ class QuantumArchSearchEnv(gym.Env):
                 cir_gate = cirq.CNOT(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'CZ':
                 cir_gate = cirq.CZ(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
-            elif gate.get_name() == 'SWAP':
-                cir_gate = cirq.SWAP(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
+            # elif gate.get_name() == 'SWAP':
+            #     cir_gate = cirq.SWAP(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'Pauli-rotation':
-                cir_gate = cirq.XXPowGate()
                 qlist = gate.get_target_index_list()
-                cir_gate.on(qubits[qlist[0]], qubits[qlist[1]])
+                cir_gate = cirq.SWAP(qubits[qlist[0]], qubits[qlist[1]])
+                # cir_gate = cirq.XXPowGate()
+                # qlist = gate.get_target_index_list()
+                # cir_gate.on(qubits[qlist[0]], qubits[qlist[1]])
             else:
                 raise TypeError("Wrong gate type")
 
@@ -318,9 +320,9 @@ class QuantumArchSearchEnv(gym.Env):
 
         # compute reward
         if fidelity > self.fidelity_threshold:
-            reward = fidelity - self.fidelity_threshold - self.reward_penalty * self.ansatz.get_gate_count()
+            reward = fidelity - self.fidelity_threshold - self.reward_penalty
         else:
-            reward = -self.reward_penalty * self.ansatz.get_gate_count()
+            reward = -self.reward_penalty
 
         # check if terminal
         terminal = (reward > 0.) or (self.ansatz.get_gate_count() >=
