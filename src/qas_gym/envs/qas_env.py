@@ -11,9 +11,9 @@ from gym import spaces
 from gym.utils import seeding
 from qulacs.gate import BitFlipNoise,DepolarizingNoise
 from qulacs import QuantumGateBase, QuantumState, QuantumCircuit, QuantumCircuitSimulator, Observable, ParametricQuantumCircuit
-from copy import deepcopy
 from vqc import Parametric_Circuit, get_fidelity_pc, calculate_fidelity
 from scipy import optimize
+import json
 
 class QuantumArchSearchEnv(gym.Env):
     metadata = {'render.modes': ['ansi', 'human']}
@@ -99,7 +99,7 @@ class QuantumArchSearchEnv(gym.Env):
         i = 0
 
         for idx, gate in enumerate(self.circuit_gates):
-            if gate.get_name() in ('X-rotation', 'Y-rotation' ,'Z-rotation'): 
+            if gate.get_name() in ('X-rotation', 'Y-rotation' ,'Z-rotation','Pauli-rotation'): 
                 angle = self.ansatz.get_parameter(i)
                 i += 1
 
@@ -123,6 +123,10 @@ class QuantumArchSearchEnv(gym.Env):
                 cir_gate = cirq.CZ(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'SWAP':
                 cir_gate = cirq.SWAP(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
+            elif gate.get_name() == 'Pauli-rotation':
+                cir_gate = cirq.XXPowGate()
+                qlist = gate.get_target_index_list()
+                cir_gate.on(qubits[qlist[0]], qubits[qlist[1]])
             else:
                 raise TypeError("Wrong gate type")
 
@@ -279,14 +283,20 @@ class QuantumArchSearchEnv(gym.Env):
         self.circuit_gates.append(action_gate) # 后面不再使用
         ##
         # self.circuit_gates.append(action_gate)
-        if action_gate.get_name() in ('X-rotation', 'Y-rotation', 'Z-rotation'): 
-            theta = np.random.rand()
+        if action_gate.get_name() in ('X-rotation', 'Y-rotation', 'Z-rotation', 'Pauli-rotation'): 
+            theta = np.random.rand() * 2*np.pi
             if action_gate.get_name() =='X-rotation':
                 self.ansatz.add_parametric_RX_gate(action_gate.get_target_index_list()[0], theta)
             elif action_gate.get_name() =='Y-rotation':
                 self.ansatz.add_parametric_RY_gate(action_gate.get_target_index_list()[0], theta)
             elif action_gate.get_name() =='Z-rotation':
                 self.ansatz.add_parametric_RZ_gate(action_gate.get_target_index_list()[0], theta)
+            elif action_gate.get_name() =='Pauli-rotation':
+                a = json.loads(action_gate.to_json())
+                pauli_ids = [int(_tmp['pauli_id']) for _tmp in a['pauli']['pauli_list']]
+                self.ansatz.add_parametric_multi_Pauli_rotation_gate(action_gate.get_target_index_list(), pauli_ids, theta)
+
+
         elif action_gate.get_name() =='CNOT':
             self.ansatz.add_CNOT_gate(action_gate.get_control_index_list()[0],action_gate.get_target_index_list()[0])
         elif action_gate.get_name() =='CZ':

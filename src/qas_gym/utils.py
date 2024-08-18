@@ -2,7 +2,7 @@ from typing import Dict, List, Optional, Union
 
 import qulacs
 import numpy as np
-from qulacs.gate import X, Y, Z, CNOT, CZ, RX, RY, RZ, H
+from qulacs.gate import X, Y, Z, CNOT, CZ, RX, RY, RZ, H, PauliRotation
 from qulacs_core import QuantumGateBase
 from qulacs import Observable
 # def get_default_gates(
@@ -33,9 +33,21 @@ def get_default_gates(
             # Y(qubit),
             # Z(qubit),
             H(qubit),
-            CNOT(qubit, next_qubit),
-            CZ(qubit, next_qubit)
         ]
+    if n_qubits > 1:
+        for qubit in range(n_qubits):
+            next_qubit = (qubit + 1) % n_qubits
+            gates += [
+                CNOT(qubit, next_qubit),
+                CZ(qubit, next_qubit)
+            ]
+            for qubit2 in range(qubit+1, n_qubits):
+                target_list = [qubit, qubit2]
+                gates += [
+                    PauliRotation(target_list, [1, 1], np.pi / 4.) ,
+                    PauliRotation(target_list, [2, 2], np.pi / 4.) , 
+                    PauliRotation(target_list, [3, 3], np.pi / 4.) 
+                ]
     return gates
 
 # def get_pauli_observables_twoqubits() -> List[cirq.GateOperation]:
