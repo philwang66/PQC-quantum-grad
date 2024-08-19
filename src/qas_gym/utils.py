@@ -32,15 +32,15 @@ def get_default_gates(
             # X(qubit),
             # Y(qubit),
             # Z(qubit),
-            H(qubit),
+            # H(qubit),
         ]
     if n_qubits > 1:
         for qubit in range(n_qubits):
             next_qubit = (qubit + 1) % n_qubits
-            gates += [
-                CNOT(qubit, next_qubit),
-                CZ(qubit, next_qubit)
-            ]
+            # gates += [
+            #     CNOT(qubit, next_qubit),
+            #     CZ(qubit, next_qubit)
+            # ]
             for qubit2 in range(qubit+1, n_qubits):
                 target_list = [qubit, qubit2]
                 gates += [

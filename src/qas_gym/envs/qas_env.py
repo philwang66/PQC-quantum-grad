@@ -46,9 +46,6 @@ class QuantumArchSearchEnv(gym.Env):
         self.error_observables = error_observables
         self.error_gates = error_gates
         self.ansatz = ParametricQuantumCircuit(n_qubits)
-        # set environment
-        # self.target_density = target * np.conj(target).T
-        # self.simulator = cirq.Simulator()
         # set spaces
         self.observation_space = spaces.Box(low=-1.,
                                             high=1.,
@@ -124,10 +121,19 @@ class QuantumArchSearchEnv(gym.Env):
             # elif gate.get_name() == 'SWAP':
             #     cir_gate = cirq.SWAP(qubits[gate.get_control_index_list()[0]], qubits[gate.get_target_index_list()[0]])
             elif gate.get_name() == 'Pauli-rotation':
-                qlist = gate.get_target_index_list()
-                cir_gate = cirq.SWAP(qubits[qlist[0]], qubits[qlist[1]])
-                # cir_gate = cirq.XXPowGate()
                 # qlist = gate.get_target_index_list()
+                # cir_gate = cirq.SWAP(qubits[qlist[0]], qubits[qlist[1]])
+                qlist = gate.get_target_index_list()
+                a = json.loads(gate.to_json())
+                pauli_ids = [int(_tmp['pauli_id']) for _tmp in a['pauli']['pauli_list']]
+                if pauli_ids == [1,1]:
+                    cir_gate = cirq.XX(qubits[qlist[0]], qubits[qlist[1]])
+                elif pauli_ids ==[2,2]:
+                    cir_gate = cirq.YY(qubits[qlist[0]], qubits[qlist[1]])
+                elif pauli_ids ==[3,3]:
+                    cir_gate = cirq.ZZ(qubits[qlist[0]], qubits[qlist[1]])
+                else:
+                    print("No correpsonding Pauli-rotation type")
                 # cir_gate.on(qubits[qlist[0]], qubits[qlist[1]])
             else:
                 raise TypeError("Wrong gate type")
@@ -142,18 +148,6 @@ class QuantumArchSearchEnv(gym.Env):
                 self.error_observables).on_each(*self.qubits)
             circuit.append(noise_observable)
         return circuit
-
-
-    # def _get_obs(self):
-    #     state = QuantumState(self.num_qubits) # deepcopy(self.state)
-    #     if self.initial:
-    #         state.load(self.initial)  
-    #     circuit = self._get_cirq(maybe_add_noise=False)
-    #     simulator = QuantumCircuitSimulator(circuit, state)
-    #     # obs = [simulator.get_expectation_value(o) for o in self.state_observables]
-    #     simulator.simulate()
-    #     obs = [o.get_expectation_value(state) for o in self.state_observables]
-    #     return np.array(obs).real
 
     def _get_obs_initial(self):
         # print(self.initial)
@@ -173,19 +167,6 @@ class QuantumArchSearchEnv(gym.Env):
         obs = [o.get_expectation_value(state) for o in self.state_observables]
         return np.array(obs).real       
 
-    # def _get_fidelity(self):
-    #     state =  QuantumState(self.num_qubits)
-    #     if self.initial:
-    #         state.load(self.initial)  
-
-    #     circuit = self._get_cirq(maybe_add_noise=False)
-    #     simulator = QuantumCircuitSimulator(circuit, state)
-    #     simulator.simulate()
-    #     print(state.get_vector())
-    #     inner = np.inner(np.conj(state.get_vector()), self.target)
-    #     fidelity = np.conj(inner) * inner
-    #     return fidelity.real
-
     def _get_fidelity_qulacs(self, circuit):
         state =  QuantumState(self.num_qubits) # deepcopy(self.state)
         if self.initial is not None:
@@ -198,8 +179,6 @@ class QuantumArchSearchEnv(gym.Env):
         """
         if only optimize the latest parameter, set which_angles=[-1]
         """
-        # qulacs_inst = Parametric_Circuit(n_qubits=self.num_qubits)
-        # circuit = qulacs_inst.construct_ansatz(self.circuit_gates)
         circuit = self.ansatz
         parameter_count_qulacs = circuit.get_parameter_count()
         print(r"number of gates:{},  number of param gates:{}".format(circuit.get_gate_count(), parameter_count_qulacs))
@@ -283,8 +262,6 @@ class QuantumArchSearchEnv(gym.Env):
         # update circuit
         action_gate = self.action_gates[action]
         self.circuit_gates.append(action_gate) # 后面不再使用
-        ##
-        # self.circuit_gates.append(action_gate)
         if action_gate.get_name() in ('X-rotation', 'Y-rotation', 'Z-rotation', 'Pauli-rotation'): 
             theta = np.random.rand() * 2*np.pi
             if action_gate.get_name() =='X-rotation':
@@ -329,7 +306,7 @@ class QuantumArchSearchEnv(gym.Env):
                                      self.max_timesteps)
 
         # return info
-        info = {'fidelity': fidelity, 'circuit': self._get_cirq()} #self._get_cirq_with_params()
+        info = {'fidelity': fidelity, 'circuit': self.ansatz} #self._get_cirq_with_params()
 
         return observation, reward, terminal, info
 
