@@ -72,9 +72,10 @@ class QuantumArchSearchEnv(gym.Env):
         return [seed]
 
     def reset(self):
+        seed=None
         self.circuit_gates = []
         self.ansatz = ParametricQuantumCircuit(self.num_qubits)
-        return self._get_obs_initial()
+        return self._get_obs_initial(seed)
 
     def _get_cirq(self, maybe_add_noise=False):
         circuit = QuantumCircuit(self.num_qubits)
@@ -149,11 +150,14 @@ class QuantumArchSearchEnv(gym.Env):
             circuit.append(noise_observable)
         return circuit
 
-    def _get_obs_initial(self):
+    def _get_obs_initial(self, seed=None):
         # print(self.initial)
         state = QuantumState(self.num_qubits)
-        if self.initial is not None:
-            state.load(self.initial) 
+        if self.initial is not None and seed is None:
+            state.load(self.initial)
+        else:
+            state = QuantumState(self.num_qubits)
+            state.set_Haar_random_state(seed)
         obs = [o.get_expectation_value(state) for o in self.state_observables]
         return np.array(obs).real  
 
@@ -181,7 +185,7 @@ class QuantumArchSearchEnv(gym.Env):
         """
         circuit = self.ansatz
         parameter_count_qulacs = circuit.get_parameter_count()
-        print(r"number of gates:{},  number of param gates:{}".format(circuit.get_gate_count(), parameter_count_qulacs))
+        # print(r"number of gates:{},  number of param gates:{}".format(circuit.get_gate_count(), parameter_count_qulacs))
         if parameter_count_qulacs > 0:
 
             thetas = [circuit.get_parameter(ind) for ind in range(parameter_count_qulacs)] 
@@ -293,7 +297,7 @@ class QuantumArchSearchEnv(gym.Env):
         # fidelity = self._get_fidelity_estimate()
         fidelity, thetas = self.scipy_optim(self.optim_alg)
         # print("Parameters: ", thetas)
-        print("Fidelity:", fidelity)
+        # print("Fidelity:", fidelity)
 
         # compute reward
         if fidelity > self.fidelity_threshold:
@@ -304,9 +308,14 @@ class QuantumArchSearchEnv(gym.Env):
         # check if terminal
         terminal = (reward > 0.) or (self.ansatz.get_gate_count() >=
                                      self.max_timesteps)
+        _state_in =  QuantumState(self.num_qubits)
+        _state_in.load(self.initial)
+        simulator = QuantumCircuitSimulator(self.ansatz, _state_in)
+        simulator.simulate()     
+        state = _state_in.get_vector()
 
         # return info
-        info = {'fidelity': fidelity, 'circuit': self.ansatz} #self._get_cirq_with_params()
+        info = {'fidelity': fidelity, 'circuit': self.ansatz, 'state': state} #self._get_cirq_with_params()
 
         return observation, reward, terminal, info
 
