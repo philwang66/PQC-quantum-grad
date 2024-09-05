@@ -74,7 +74,7 @@ class Parametric_Circuit:
 #     return np.real(np.vdot(v,np.dot(observable,v))) + energy_shift
 
 def calculate_fidelity(state, target):
-    inner = np.inner(np.conj(state.get_vector()), target)
+    inner = np.inner(np.conj(state), target)
     fidelity = np.conj(inner) * inner
     return fidelity.real  
 
@@ -93,7 +93,7 @@ def get_fidelity_pc(angles, circuit, n_qubits, target, initial=None, which_angle
         state.load(initial)   
     
     circuit.update_quantum_state(state)   
-    fidelity = calculate_fidelity(state, target)
+    fidelity = calculate_fidelity(state.get_vector(), target)
     return -fidelity
 
 

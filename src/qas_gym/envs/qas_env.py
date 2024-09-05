@@ -53,6 +53,7 @@ class QuantumArchSearchEnv(gym.Env):
         self.action_space = spaces.Discrete(n=len(action_gates))
         self.optim_alg = 'COBYLA' #'Nelder-Mead'
         self.global_iters = 1000
+        self.fidelity_prev = calculate_fidelity(self.initial, self.target)
         self.seed()
 
     def __str__(self):
@@ -177,7 +178,7 @@ class QuantumArchSearchEnv(gym.Env):
             state.load(self.initial)          
         simulator = QuantumCircuitSimulator(circuit, state)
         simulator.simulate()
-        return calculate_fidelity(state, self.target)
+        return calculate_fidelity(state.get_vector(), self.target)
 
     def scipy_optim(self, method, which_angles=[]):
         """
@@ -294,25 +295,28 @@ class QuantumArchSearchEnv(gym.Env):
 
         # compute fidelity
         # fidelity = self._get_fidelity()
-        # fidelity = self._get_fidelity_estimate()
+        fidelity_prev = self.fidelity_prev
         fidelity, thetas = self.scipy_optim(self.optim_alg)
+        self.fidelity_prev = fidelity
         # print("Parameters: ", thetas)
         # print("Fidelity:", fidelity)
 
         # compute reward
-        if fidelity > self.fidelity_threshold:
-            reward = fidelity - self.fidelity_threshold - self.reward_penalty
+        if fidelity >= self.fidelity_threshold:
+            reward = 10.0 - self.reward_penalty
+        elif fidelity < self.fidelity_threshold and self.ansatz.get_gate_count() >= self.max_timesteps:
+            reward = -5.0
         else:
-            reward = -self.reward_penalty
+            reward = max((fidelity-fidelity_prev)/(self.fidelity_threshold - fidelity_prev), -1.0) - self.reward_penalty
 
         # check if terminal
-        terminal = (reward > 0.) or (self.ansatz.get_gate_count() >=
+        terminal = (fidelity >= self.fidelity_threshold) or (self.ansatz.get_gate_count() >=
                                      self.max_timesteps)
-        _state_in =  QuantumState(self.num_qubits)
-        _state_in.load(self.initial)
-        simulator = QuantumCircuitSimulator(self.ansatz, _state_in)
+        _state =  QuantumState(self.num_qubits)
+        _state.load(self.initial)
+        simulator = QuantumCircuitSimulator(self.ansatz, _state)
         simulator.simulate()     
-        state = _state_in.get_vector()
+        state = _state.get_vector()
 
         # return info
         info = {'fidelity': fidelity, 'circuit': self.ansatz, 'state': state} #self._get_cirq_with_params()
