@@ -11,7 +11,7 @@ from gym import spaces
 from gym.utils import seeding
 from qulacs.gate import BitFlipNoise,DepolarizingNoise
 from qulacs import QuantumGateBase, QuantumState, QuantumCircuit, QuantumCircuitSimulator, Observable, ParametricQuantumCircuit
-from vqc import Parametric_Circuit, get_fidelity_pc, calculate_fidelity
+from vqc import get_fidelity_pc, calculate_fidelity
 from scipy import optimize
 import json
 
