@@ -14,8 +14,8 @@ This repository contains implementation and code examples of numerical experimen
 
 The numerical experiments of two example problems (namely the MAXCUT problem and the polynomial optimization problem) can be found in ./notebook folder.
 
-A large portion of the code base is the implementation of reinforcement learning algorithm for <ins>Quantum Architecture Search</ins>. Similar to the RL algorithm by [Kuo of et al.](https://arxiv.org/abs/2406.06210), we built a customized <ins>Gym</ins> environments and extend the action spaces to paramterized gates, like the single-qubit Pauli rotation gates
-($RX(\theta)$, $RY(\theta)$, $RZ(\theta)$)and two-quibit Pauli rotation gates ($RXX(\theta)$, $RYY(\theta)$, $RZZ(\theta)$). We use <ins>Qulacs</ins> (https://docs.qulacs.org/en/latest/index.html) backend for quantum circuit simulation, ultilizing the Parameterized Quantum Circuit class implementation therein. 
+A large portion of the code base is the implementation of reinforcement learning algorithm for <ins>Quantum Architecture Search</ins>. Similar to the RL algorithm by [Kuo of et al.](https://arxiv.org/abs/2406.06210), we built a customized <ins>Gymnasium</ins> environments and extend the action spaces to paramterized gates, like the single-qubit Pauli rotation gates
+($RX(\theta)$, $RY(\theta)$, $RZ(\theta) $)and two-quibit Pauli rotation gates ($RXX(\theta)$, $RYY(\theta)$, $RZZ(\theta) $). The default observables are chosen to be expecation values of single qubit Pauli observables, and optionally higher order Pauli observables - for example all two-qubit Paulis. We use <ins>Qulacs</ins> (https://docs.qulacs.org/en/latest/index.html) backend for quantum circuit simulation, ultilizing the Parameterized Quantum Circuit class implementation therein. 
 
 
 ## **Setup**
