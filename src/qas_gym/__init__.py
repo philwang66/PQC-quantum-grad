@@ -1,4 +1,4 @@
-from gym.envs.registration import register
+from gymnasium.envs.registration import register
 
 register(id='QuantumArchSearch-v0',
          entry_point='qas_gym.envs:QuantumArchSearch',
@@ -10,6 +10,10 @@ register(id='BasicTwoQubit-v0',
 
 register(id='BasicThreeQubit-v0',
          entry_point='qas_gym.envs:BasicThreeQubitEnv',
+         nondeterministic=True)
+
+register(id='BasicFourQubit-v0',
+         entry_point='qas_gym.envs:BasicFourQubitEnv',
          nondeterministic=True)
 
 register(id='BasicNQubit-v0',
@@ -28,6 +32,6 @@ register(id='NoisyNQubit-v0',
          entry_point='qas_gym.envs:NoisyNQubitEnv',
          nondeterministic=True)
 
-register(id='BasicFourQubit-v0',
-         entry_point='qas_gym.envs:BasicFourQubitEnv',
+register(id='GeneralNQubit-v0',
+         entry_point='qas_gym.envs:GeneralNQubitEnv',
          nondeterministic=True)
