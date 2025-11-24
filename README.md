@@ -25,4 +25,16 @@ To <ins>install</ins>, clone this repository and execute the following commands 
 $ cd PQC-quantum-grad
 $ pip install -r requirements.txt
 $ pip install -e .
+# python setup.py install
 ```
+
+## **Run examples**
+To reproduce the results in the paper, run the notebooks for MAX-CUT and polynomial optimization example under folder /notebooks
+
+For comparison with Adapt-VQE and standard (randomized) PQC methods, run
+
+```
+python notebooks/sup_chem.py
+python notebooks/sup_standard_pqc
+```
+
