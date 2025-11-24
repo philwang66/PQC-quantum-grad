@@ -1,6 +1,6 @@
 import cirq
 import numpy as np
-from qas_gym.envs.qas_env import QuantumArchSearchEnv
+from qas_gym.envs.qas_env import QuantumArchSearchEnv,QuantumArchSearchGeneralEnv
 from qas_gym.utils import *
 
 

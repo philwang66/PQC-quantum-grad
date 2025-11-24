@@ -6,7 +6,6 @@ import os
 import scipy
 import time
 import matplotlib.pyplot as plt
-import torch
 import pathlib
 
 import numpy as np
@@ -73,8 +72,8 @@ class Parametric_Circuit:
 #     v = state.get_vector()
 #     return np.real(np.vdot(v,np.dot(observable,v))) + energy_shift
 
-def calculate_fidelity(state, target):
-    inner = np.inner(np.conj(state), target)
+def calculate_fidelity(init, target):
+    inner = np.inner(np.conj(init), target)
     fidelity = np.conj(inner) * inner
     return fidelity.real  
 
