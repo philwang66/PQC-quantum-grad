@@ -14,12 +14,12 @@ This repository contains implementation and code examples of numerical experimen
 
 The numerical experiments of two example problems (namely the MAXCUT problem and the polynomial optimization problem) can be found in ./notebook folder.
 
-A large portion of the code base is the implementation of reinforcement learning algorithm for <ins>Quantum Architecture Search</ins>. Similar to the RL algorithm by [Kuo of et al.](https://arxiv.org/abs/2406.06210), we built a customized <ins>Gymnasium</ins> environments and extend the action spaces to paramterized gates, like the single-qubit Pauli rotation gates
-($RX(\theta)$, $RY(\theta)$, $RZ(\theta) $)and two-quibit Pauli rotation gates ($RXX(\theta)$, $RYY(\theta)$, $RZZ(\theta) $). The default observables are chosen to be expecation values of single qubit Pauli observables, and optionally higher order Pauli observables - for example all two-qubit Paulis. We use <ins>Qulacs</ins> (https://docs.qulacs.org/en/latest/index.html) backend for quantum circuit simulation, ultilizing the Parameterized Quantum Circuit class implementation therein. 
+A large portion of the code base is the implementation of reinforcement learning algorithm for Quantum Architecture Search. Similar to the RL algorithm by [Kuo of et al.](https://arxiv.org/abs/2406.06210), we built a customized [Gymnasium](https://github.com/Farama-Foundation/Gymnasium) environments and extend the action spaces to paramterized gates, like the single-qubit Pauli rotation gates
+{ $RX(\theta)$, $RY(\theta)$, $RZ(\theta)$ }and two-quibit Pauli rotation gates { $RXX(\theta)$, $RYY(\theta)$, $RZZ(\theta) $}. The default observables are chosen to be expecation values of single qubit Pauli observables, and optionally higher order Pauli observables - for example all two-qubit Paulis. We use [Qulacs](https://docs.qulacs.org/en/latest/index.html) backend for quantum circuit simulation, ultilizing the Parameterized Quantum Circuit class implementation therein. 
 
 
 ## **Setup**
-To <ins>install</ins>, clone this repository and execute the following commands :
+To install, clone this repository and execute the following commands :
 
 ```
 $ cd PQC-quantum-grad
@@ -29,7 +29,7 @@ $ pip install -e .
 ```
 
 ## **Run examples**
-To reproduce the results in the paper, run the notebooks for MAX-CUT and polynomial optimization example under folder /notebooks
+To reproduce the results for MAX-CUT /polynomial optimization in the paper, run the notebooks (example1.ipynb  for MAX-CUT and example2.ipynb for  polynomial optimization) under directory /notebooks
 
 For comparison with Adapt-VQE and standard (randomized) PQC methods, run
 
